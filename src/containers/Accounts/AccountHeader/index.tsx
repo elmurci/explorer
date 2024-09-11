@@ -2,6 +2,7 @@ import { useContext, useEffect } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
+import { convertHexToString } from 'xrpl'
 import { loadAccountState } from './actions'
 import { Loader } from '../../shared/components/Loader'
 import './styles.scss'
@@ -36,8 +37,8 @@ interface AccountHeaderProps {
       channels: any[]
     }
     escrows: {
-      totalIn: number
-      totalOut: number
+      totalIn: any
+      totalOut: any
     }
     signerList: {
       signers: {
@@ -129,21 +130,51 @@ const AccountHeader = (props: AccountHeaderProps) => {
 
   function renderEscrows() {
     const { escrows } = data
+    // localizeNumber(escrows.totalIn, language, CURRENCY_OPTIONS)
     return (
-      escrows && (
+      escrows &&
+      escrows.totalIn && (
         <div className="escrows secondary">
           <div className="title">{t('escrows')}</div>
           <ul>
             <li>
               <span className="label">{t('inbound_total')}: </span>
               <b>
-                {localizeNumber(escrows.totalIn, language, CURRENCY_OPTIONS)}
+                {Object.entries(escrows.totalIn).map(([k, v]) => (
+                  <div key={k}>
+                    <span className="totalInLabel">
+                      {convertHexToString(k.split('.')[0])}
+                    </span>
+                    <span className="value weight">
+                      {localizeNumber(v, language, {
+                        style: 'currency',
+                        currency: k.split('.')[0],
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 6,
+                      })}
+                    </span>
+                  </div>
+                ))}
               </b>
             </li>
             <li>
               <span className="label">{t('outbound_total')}: </span>
               <b>
-                {localizeNumber(escrows.totalOut, language, CURRENCY_OPTIONS)}
+                {Object.entries(escrows.totalOut).map(([k, v]) => (
+                  <div key={k} className="token-issuer">
+                    <span className="totalOutLabel">
+                      {convertHexToString(k.split('.')[0])}
+                    </span>
+                    <span className="value weight">
+                      {localizeNumber(v, language, {
+                        style: 'currency',
+                        currency: k.split('.')[0],
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 6,
+                      })}
+                    </span>
+                  </div>
+                ))}
               </b>
             </li>
           </ul>

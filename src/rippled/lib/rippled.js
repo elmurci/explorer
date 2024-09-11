@@ -5,12 +5,14 @@ import { Error, XRP_BASE, convertRippleDate } from './utils'
 const N_UNL_INDEX =
   '2E8A59AA9D3B5B186B0B9E0F62E6C02587CA74A4D778938E957B6357D364B244'
 
-const formatEscrow = (d) => ({
+const formatEscrow = (d, isIssuedToken) => ({
   id: d.index,
   account: d.Account,
   destination: d.Destination,
-  amount: d.Amount / XRP_BASE,
+  amount: isIssuedToken ? d.Amount.value : d.Amount / XRP_BASE,
   condition: d.Condition,
+  token: d.Amount.currency,
+  issuer: d.Amount.issuer,
   cancelAfter: d.CancelAfter ? convertRippleDate(d.CancelAfter) : undefined,
   finishAfter: d.FinishAfter ? convertRippleDate(d.FinishAfter) : undefined,
 })
@@ -221,22 +223,34 @@ const getAccountEscrows = (rippledSocket, account, ledgerIndex = 'validated') =>
       return undefined
     }
 
-    const escrows = { in: [], out: [], total: 0, totalIn: 0, totalOut: 0 }
+    const escrows = { in: [], out: [], total: {}, totalIn: {}, totalOut: {} }
     resp.account_objects.forEach((d) => {
-      const amount = Number(d.Amount)
-      escrows.total += amount
+      const isIssuedToken = typeof d.Amount === 'object'
+      const amount = Number(isIssuedToken ? d.Amount.value : d.Amount)
+      const tokenId = isIssuedToken
+        ? `${d.Amount.currency}.${d.Amount.issuer}`
+        : 'XRP'
+      if (!escrows.total[tokenId]) {
+        escrows.total[tokenId] = 0
+        escrows.totalIn[tokenId] = 0
+        escrows.totalOut[tokenId] = 0
+      }
+      escrows.total[tokenId] += amount
       if (account === d.Destination) {
-        escrows.in.push(formatEscrow(d))
-        escrows.totalIn += amount
+        escrows.in.push(formatEscrow(d, isIssuedToken))
+        escrows.totalIn[tokenId] += amount
       } else {
-        escrows.out.push(formatEscrow(d))
-        escrows.totalOut += amount
+        escrows.out.push(formatEscrow(d, isIssuedToken))
+        escrows.totalOut[tokenId] += amount
       }
     })
 
-    escrows.total /= XRP_BASE
-    escrows.totalIn /= XRP_BASE
-    escrows.totalOut /= XRP_BASE
+    if (escrows.total.XRP) {
+      escrows.total.XRP /= XRP_BASE
+      escrows.totalIn.XRP /= XRP_BASE
+      escrows.totalOut.XRP /= XRP_BASE
+    }
+
     return escrows
   })
 

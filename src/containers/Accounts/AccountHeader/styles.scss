@@ -3,6 +3,14 @@
 .account-header {
   margin-bottom: 16px;
 
+  .totalInLabel {
+    color: $green-60;
+  }
+
+  .totalOutLabel {
+    color: $blue-70;
+  }
+
   .title {
     padding-bottom: 4px;
     color: $black-40;
